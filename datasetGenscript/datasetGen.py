@@ -58,7 +58,7 @@ while n>0:
 
 
 	#font                   = cv2.FONT_HERSHEY_SIMPLEX
-	cv2fontList = [0, 2, 3, 4, 6, 7] #Ref https://codeyarns.com/tech/2015-03-11-fonts-in-opencv.html
+	cv2fontList = [0, 2, 3, 4] #Ref https://codeyarns.com/tech/2015-03-11-fonts-in-opencv.html
 
 	font                   = random.choice(cv2fontList) 
 	fontScale              = random.uniform(0.5, 0.75)
@@ -100,6 +100,8 @@ while n>0:
 	# Total
 	cv2.putText(img, str(Total), (TotalStart, rowStart), font, fontScale, fontColor, lineType)
 
+
+ 
 	# Step 2 Create Segmentation Mask for text
 	mask = np.zeros((img.shape), np.uint8)
 
@@ -111,7 +113,7 @@ while n>0:
 
 	cv2.rectangle(mask, topLeftCorner, bottomRightCorner, 60, -1)
 
-
+	tableBoxEndRow = rowStart + 20
 	# Step 3 Add text to Nature Column
 	rowStart = randrange(135,360)
 	textStart = int(np.random.normal(910, 20))
@@ -133,7 +135,7 @@ while n>0:
 				line = line.join(random.choices(string.ascii_uppercase + string.digits, k = letters))
 				line += " "
 		
-			(label_width, label_height), baseline = cv2.getTextSize(line, font, fontScale*0.9, lineType)
+			(label_width, label_height), baseline = cv2.getTextSize(line, font, fontScale*0.98, lineType)
 			print(label_width)
 			if (label_width+textStart) > 1200:
 				continue
@@ -149,16 +151,91 @@ while n>0:
 	for i, line in enumerate(ProductDiscription.split('\n')):
 		y = rowStart + i* (baseline+label_height)
     	#cv2.putText(img, line, (50, y ), cv2.FONT_HERSHEY_SIMPLEX, 1, 2)
-		cv2.putText(img, line, (textStart, y), font, fontScale*0.9, fontColor, lineType)		
+		cv2.putText(img, line, (textStart, y), font, fontScale*0.98, fontColor, lineType)		
 	#print(maxStrechOfTextBox)
-	topLeftCorner      = (textStart-10,  rowStart - (baseline+ label_height + 5))
-	bottomRightCorner  = (textStart + maxStrechOfTextBox + 10,   y)
+	topLeftCorner      = (textStart-5,  rowStart - (baseline+ label_height + 5))
+	bottomRightCorner  = (textStart + maxStrechOfTextBox + 5,   y)
+
+	cv2.rectangle(mask, topLeftCorner, bottomRightCorner, 100, -1)
+	discriptionBoxEndRow = y
+	# Step 4 Add Dimention Block
+	dimentionOptions = ["DIMS IN INCHES:", "DIMS IN CMS:", "DIMENSIONS (CMS):", "DIMENSIONS:", "DIMS(CMS):",
+			    "DIMS(INCHES):", "DIMS:", "BOX DIMENTIONS", "DIMENTION OF BOX AS", "Dimenstions of box:",
+                            "Dimenstions", "Dims:", "dimentions (CMS)", "dimentions(INCHES)", "dims(CMS)", "dimentions in INC:"]
+	mulOptions = ["*", " * ", "x", " x ", "X", " X "]
+
+	boxes = randrange(1,6)
+	dimenstionDescription = random.choice(dimentionOptions)
+	(label_width, label_height), baseline = cv2.getTextSize(dimenstionDescription, font, fontScale*0.98, lineType)
+	dimenstionDescription += "\n"
+	mul = random.choice(mulOptions)
+
+	dimentionBoxStartRow = max(discriptionBoxEndRow, tableBoxEndRow)
+
+	dimentionBoxStartRow += int(np.random.normal(50, 20))
+	maxStrechOfTextBox = 0
+	for box in range(boxes):
+		boxdims1 = ''+str(randrange(1,140))+mul+str(randrange(1,140))+mul+str(randrange(1,140))
+		dimenstionDescription += boxdims1
+		dimenstionDescription += "\n"
+		(label_width, label_height), baseline = cv2.getTextSize(boxdims1, font, fontScale*0.98, lineType)
+		maxStrechOfTextBox = max(maxStrechOfTextBox,label_width)
+
+	dimBoxTextStart = random.choice([textStart, int(np.random.normal(800, 80))])
+	for i, line in enumerate(dimenstionDescription.split('\n')):
+		y = dimentionBoxStartRow + i* (baseline+label_height)
+		cv2.putText(img, line, (textStart, y), font, fontScale*0.98, fontColor, lineType)
+
+	topLeftCorner      = (dimBoxTextStart-5,  dimentionBoxStartRow - (baseline+ label_height + 5))
+	bottomRightCorner  = (dimBoxTextStart + maxStrechOfTextBox + 5,   y)
+
+	cv2.rectangle(mask, topLeftCorner, bottomRightCorner, 150, -1)
+
+
+	#Step 5 Add Random Details
+
+	rowStart =  tableBoxEndRow + randrange(30,150)
+	textStart = randrange(100, 400)
+	
+	OtherDiscription = ''
+
+	maxStrechOfTextBox = 0
+	baseline = 0
+	lines = randrange(2,8)
+	for l in range(1,lines):
+		lineNotReady = True
+		while lineNotReady:
+			words = randrange(3,5)
+			print("words: ", words)
+			line = ''
+			for w in range(1, words+1):
+				letters = randrange(2, 5)
+				line = line.join(random.choices(string.ascii_uppercase + string.digits, k = letters))
+				line += " "
+		
+			(label_width, label_height), baseline = cv2.getTextSize(line, font, fontScale*0.98, lineType)
+			print(label_width, textStart, dimBoxTextStart )
+			if (label_width+textStart) > dimBoxTextStart - 50:
+				continue
+			else:
+				maxStrechOfTextBox = max(maxStrechOfTextBox, label_width)
+				lineNotReady = False
+		OtherDiscription += line
+		OtherDiscription += "\n"
+	print("len --->>", OtherDiscription)
+	y = 0
+	for i, line in enumerate(OtherDiscription.split('\n')):
+		y = rowStart + i* (baseline+label_height)
+		cv2.putText(img, line, (textStart, y), font, fontScale*0.98, fontColor, lineType)		
+	topLeftCorner      = (textStart-5,  rowStart - (baseline+ label_height + 5))
+	bottomRightCorner  = (textStart + maxStrechOfTextBox + 5,   y)
 
 	cv2.rectangle(mask, topLeftCorner, bottomRightCorner, 100, -1)
 
+	discriptionBoxEndRow = y
 	cv2.imshow("Display window", img)
 	cv2.imshow("Segmentation Mask", mask)
-	cv2.waitKey(0)
+	cv2.waitKey(20)
 
 
 
