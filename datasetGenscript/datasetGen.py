@@ -66,7 +66,7 @@ while n>0:
 	lineType               = 2
 
 
-	rowStart = randrange(152,320)
+	rowStart = randrange(135,320)
 
 	piecesStart = randrange (31,68)
 	GWStart = randrange(112,157)
@@ -113,40 +113,44 @@ while n>0:
 
 
 	# Step 3 Add text to Nature Column
+	rowStart = randrange(135,360)
+	textStart = int(np.random.normal(910, 20))
 	
-	textStart = int(np.random.normal(930, 10))
-
 	ProductDiscription = ''
 
 	maxStrechOfTextBox = 0
 	baseline = 0
-	lines = randrange(1,6+1)
+	lines = randrange(2,8)
+	print("lines : ", lines)
 	for l in range(1,lines):
 		lineNotReady = True
 		while lineNotReady:
-			words = randrange(2,5)
+			words = randrange(3,5)
+			print("words: ", words)
 			line = ''
-			for w in range(2, words+1):
+			for w in range(1, words+1):
 				letters = randrange(2, 5)
 				line = line.join(random.choices(string.ascii_uppercase + string.digits, k = letters))
 				line += " "
 		
 			(label_width, label_height), baseline = cv2.getTextSize(line, font, fontScale*0.9, lineType)
-			if (label_width+textStart) > 1165:
+			print(label_width)
+			if (label_width+textStart) > 1200:
+				continue
+			if label_width < 2:
 				continue
 			else:
-				ProductDiscription += line
-				ProductDiscription += "\n"
 				maxStrechOfTextBox = max(maxStrechOfTextBox, label_width)
 				lineNotReady = False
-
-	print(ProductDiscription)
+		ProductDiscription += line
+		ProductDiscription += "\n"
+	print("len --->>", ProductDiscription)
 	y = 0
 	for i, line in enumerate(ProductDiscription.split('\n')):
 		y = rowStart + i* (baseline+label_height)
     	#cv2.putText(img, line, (50, y ), cv2.FONT_HERSHEY_SIMPLEX, 1, 2)
 		cv2.putText(img, line, (textStart, y), font, fontScale*0.9, fontColor, lineType)		
-	print(maxStrechOfTextBox)
+	#print(maxStrechOfTextBox)
 	topLeftCorner      = (textStart-10,  rowStart - (baseline+ label_height + 5))
 	bottomRightCorner  = (textStart + maxStrechOfTextBox + 10,   y)
 
