@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 import string
-
+from collections import namedtuple
 from random import randrange
 import random
 # Image Gen
@@ -9,6 +9,64 @@ import random
 
 # Read template
 imgOriginal = cv2.imread("t01.png",0)
+
+position = namedtuple('position',['row','col'])
+
+def addRandomText(img, location, maxstrech):
+	cv2fontList = [0, 2, 3, 4] #Ref https://codeyarns.com/tech/2015-03-11-fonts-in-opencv.html
+	font                   = random.choice(cv2fontList) 
+	fontScale              = random.uniform(0.5, 0.75)
+	fontColor              = (2)
+	lineType               = 2
+
+	rowStart = location.row
+	textStart = location.col
+	
+	ProductDiscription = ''
+
+	maxStrechOfTextBox = 0
+	baseline = 0
+	lines = randrange(2,5)
+	#print("lines : ", lines)
+	for l in range(1,lines):
+		lineNotReady = True
+		while lineNotReady:
+			words = randrange(3,5)
+			#print("words: ", words)
+			line = ''
+			for w in range(1, words+1):
+				letters = randrange(2, 5)
+				line = line.join(random.choices(string.ascii_uppercase + string.digits, k = letters))
+				line += " "
+		
+			(label_width, label_height), baseline = cv2.getTextSize(line, font, fontScale*0.98, lineType)
+			print(label_width)
+			if (label_width+textStart) > maxstrech:
+				continue
+			if label_width < 2:
+				continue
+			else:
+				maxStrechOfTextBox = max(maxStrechOfTextBox, label_width)
+				lineNotReady = False
+		ProductDiscription += line
+		ProductDiscription += "\n"
+
+	y = 0
+	for i, line in enumerate(ProductDiscription.split('\n')):
+		y = rowStart + i* (baseline+label_height)
+    	#cv2.putText(img, line, (50, y ), cv2.FONT_HERSHEY_SIMPLEX, 1, 2)
+		cv2.putText(img, line, (textStart, y), font, fontScale*0.98, fontColor, lineType)		
+	#print(maxStrechOfTextBox)
+	topLeftCorner      = (textStart-5,  rowStart - (baseline+ label_height + 5))
+	bottomRightCorner  = (textStart + maxStrechOfTextBox + 5,   y)
+	return (img,topLeftCorner,bottomRightCorner)
+
+def randomBackground(img):
+	location = position(100,0)
+	strech = 600
+	maxstrech = min(location.col+ strech, img.shape[1])
+	imgp,TL, BR = addRandomText(img, location, maxstrech)
+	return imgp
 
 def DilateH(img):
 	# Taking a matrix of size 5 as the kernel 
@@ -235,8 +293,14 @@ while n>0:
 	discriptionBoxEndRow = y
 	cv2.imshow("Display window", img)
 	cv2.imshow("Segmentation Mask", mask)
-	cv2.waitKey(20)
+	cv2.waitKey(0)
 
+	syntheticImg = np.zeros([512,1024,1],dtype=np.uint8)  
+	syntheticImg.fill(255)
+	
+	
 
+	syntheticImg = randomBackground(syntheticImg)
+	cv2.imshow('Single Channel Window', syntheticImg)
 
 
