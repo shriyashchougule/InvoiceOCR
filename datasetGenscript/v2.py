@@ -22,6 +22,11 @@ for read images 1 to 10
 	save sample
 """
 
+TableLable = 50
+NatureLable = 150
+DimentionLable = 150
+otherLable = 100
+
 def ResizeWithAspectRatio(image, width=None, height=None, inter=cv2.INTER_AREA):
     dim = None
     (h, w) = image.shape[:2]
@@ -193,6 +198,228 @@ def add_handling_information(img, rowRange, colRange, strechRange, lineRange=(1,
 
     return img
 
+def add_text_with_mask(img, mask, label, rowRange, colRange, strechRange, lineRange=(1,2), wordRange=(1,2),  fontScale = None, spacing =1):
+    cv2fontList = [0, 2, 3, 4, 6, 7] #Ref https://codeyarns.com/tech/2015-03-11-fonts-in-opencv.html
+    font                   = random.choice(cv2fontList)
+    
+    if fontScale is None: 
+        fontScale              = random.uniform(0.5, 0.75)
+    fontColor              = 0
+    lineType               = 2
+    
+    startRow = randrange(*rowRange)
+    startCol = randrange(*colRange)
+    textMaxStrech = randrange(*strechRange)
+    lines = randrange(*lineRange)
+
+    discription = ''
+
+    maxStrechOfTextBox = 0
+    baseline = 0
+    
+    for l in range(1,lines+1):
+        lineNotReady = True
+        while lineNotReady:
+            words = randrange(*wordRange)
+            #print("words: ", words)
+            line = ''
+            for w in range(1, words+1):
+                letters = randrange(1, 12)
+                #print(w, letters)
+                myword = "".join(random.choices(string.ascii_lowercase + string.ascii_uppercase + string.digits, k = letters))
+                line += myword
+                line += " "*spacing
+                #print("line :", line)    
+            (label_width, label_height), baseline = cv2.getTextSize(line, font, fontScale*0.98, lineType)
+            print(label_width)
+            if (label_width+startCol) > textMaxStrech:
+                continue
+            else:
+                maxStrechOfTextBox = max(maxStrechOfTextBox, label_width)
+                lineNotReady = False
+                discription += line
+                if l < lines:
+                    discription += "\n"
+
+
+    y = 0
+    for i, line in enumerate(discription.split('\n')):
+        if line != '\n':
+            (label_width, label_height), baseline = cv2.getTextSize(line, font, fontScale*0.98, lineType)
+            y = startRow + i* (baseline+label_height)
+            cv2.putText(img, line, (startCol, y), font, fontScale*0.98, fontColor, lineType)
+
+            topLeftCorner      = (startCol-10,  y - (baseline+ label_height + 5))
+            bottomRightCorner  = (startCol + label_width + 10,   y)
+            cv2.rectangle(mask, topLeftCorner, bottomRightCorner, label, -1)
+
+    endOfBox = y
+    return (img, mask, endOfBox)
+
+
+    
+def add_table_entries(img):
+    KgOptions = ["K", "k", "lb", ""]
+    RCOptions = ["Q", "q", "Q", "", "Q", "q", "Q", ""]
+    CCOptions = ["", "", "M", "", "", "N", "", "", "K", "", "", ""]
+
+    ratcCOptions = ["AS AGREED", "pay", "pay", "pay"]
+
+    pieces = randrange(1,140)
+    GW     = randrange(1,1000)
+    Kg     = random.choice(KgOptions)
+    RC     = random.choice(RCOptions)
+    CC     = random.choice(CCOptions)
+    CW     = randrange(1,240)
+
+    rateC  = "AS AGREED"
+    if random.choice(ratcCOptions) == "pay":
+	    rateC  = randrange(1,140)
+
+    Total = "AS AGREED"
+    if rateC != "AS AGREED":
+	    Total = rateC * CW
+
+    Nature = "one\ntwo\nthree"
+
+
+    #font                   = cv2.FONT_HERSHEY_SIMPLEX
+    cv2fontList = [0, 2, 3, 4] #Ref https://codeyarns.com/tech/2015-03-11-fonts-in-opencv.html
+
+    font                   = random.choice(cv2fontList) 
+    fontScale              = random.uniform(0.5, 0.75)
+    fontColor              = (2)
+    lineType               = 2
+
+
+    rowStart = randrange(913, 1001)
+
+    piecesStart = randrange (78, 130)
+    GWStart = randrange(170,215)
+    KgStart = randrange(262,272)
+    RCStart = randrange(287,297)
+    CCStart = randrange(330, 381)
+    CWStart = randrange(445,490)
+
+    rateCStart = 570
+    if rateC != "AS AGREED":
+	    rateCStart = randrange(560,630)
+
+    TotalStart = 720
+    if rateC != "AS AGREED":
+	    TotalStart = randrange(720,800)
+
+    # No.of peices
+    cv2.putText(img, str(pieces), (piecesStart, rowStart), font, fontScale, fontColor, lineType)
+    # gross weight
+    cv2.putText(img, str(GW), (GWStart, rowStart), font, fontScale, fontColor, lineType)
+    # kg
+    cv2.putText(img, Kg, (KgStart, rowStart), font, fontScale, fontColor, lineType)
+    # RC
+    cv2.putText(img, RC, (RCStart, rowStart), font, fontScale, fontColor, lineType)
+    # CC
+    cv2.putText(img, CC, (CCStart, rowStart), font, fontScale, fontColor, lineType)
+    # CW
+    cv2.putText(img, str(CW), (CWStart, rowStart), font, fontScale, fontColor, lineType)
+    # rateC
+    cv2.putText(img, str(rateC), (rateCStart, rowStart), font, fontScale, fontColor, lineType) 
+    # Total
+    cv2.putText(img, str(Total), (TotalStart, rowStart), font, fontScale, fontColor, lineType)
+    
+    # Step 2 Create Segmentation Mask for text
+    segMask = np.zeros((img.shape), np.uint8)
+
+    # Strech of the last word i.e value in the Total column 
+    (label_width, label_height), baseline = cv2.getTextSize(str(Total), font, fontScale, lineType)
+
+    topLeftCorner      = (piecesStart-10,  rowStart - (baseline+ label_height + 5))
+    bottomRightCorner  = (TotalStart + label_width + 10,  rowStart + 5)
+
+    cv2.rectangle(segMask, topLeftCorner, bottomRightCorner, TableLable, -1)
+
+    tableBoxEndRow = rowStart + 40
+
+    on = [1]
+    off = [0]
+    rowRange    = (900, 990)
+    colRange    = (850, 910)
+    strechRange = (1150, 1230)
+    lineRange   = (1,6)
+    wordRange   = (3, 7)
+
+    img, segMask,eob =add_text_with_mask(img, segMask, NatureLable,rowRange, colRange, strechRange, lineRange, wordRange,  spacing =1)
+
+    rowRange    = (tableBoxEndRow, 1100)
+    colRange    = (60, 450)
+    strechRange = (550, 750)
+    lineRange   = (1,4)
+    wordRange   = (3, 20)  
+    puttext     = random.choice(on*75 + off*25)
+    if puttext:
+        img, segMask,e =add_text_with_mask(img, segMask,otherLable, rowRange, colRange, strechRange, lineRange, wordRange,  spacing =1)
+
+    rowRange    = (tableBoxEndRow, 1100)
+    colRange    = (200, 710)
+    strechRange = (800, 801)
+    lineRange   = (1,3)
+    wordRange   = (2, 4)
+    puttext     = random.choice(on*50 + off*50)
+    if puttext:
+        img, segMask,e =add_text_with_mask(img, segMask, otherLable, rowRange, colRange, strechRange, lineRange, wordRange, spacing =1)
+
+    rowRange    = (tableBoxEndRow, 1100)
+    colRange    = (60, 710)
+    strechRange = (800, 801)
+    lineRange   = (1,2)
+    wordRange   = (2, 4)
+    puttext     = random.choice(on*20 + off*80)
+    if puttext:   
+        img, segMask,e =add_text_with_mask(img, segMask, otherLable, rowRange, colRange, strechRange, lineRange, wordRange, spacing =1)
+
+
+    # Step 4 Add Dimention Block
+    dimentionOptions = ["DIMS IN INCHES:", "DIMS IN CMS:", "DIMENSIONS (CMS):", "DIMENSIONS:", "DIMS(CMS):",
+		        "DIMS(INCHES):", "DIMS:", "BOX DIMENTIONS", "DIMENTION OF BOX AS", "Dimenstions of box:",
+                            "Dimenstions", "Dims:", "dimentions (CMS)", "dimentions(INCHES)", "dims(CMS)", "dimentions in INC:"]
+    mulOptions = ["*", " * ", "x", " x ", "X", " X "]
+
+    boxes = randrange(1,6)
+    dimenstionDescription = random.choice(dimentionOptions)
+    (label_width, label_height), baseline = cv2.getTextSize(dimenstionDescription, font, fontScale*0.98, lineType)
+    dimenstionDescription += "\n"
+    mul = random.choice(mulOptions)
+
+    dimentionBoxStartRow = max(tableBoxEndRow, eob+10)
+    dimBoxTextStart = randrange(812, 900)
+
+    puttext     = random.choice(on*65 + off*35)
+    if puttext:
+        dimentionBoxStartRow = eob+10
+        dimBoxTextStart = randrange(885, 895)
+
+    puttext     = random.choice(on*70 + off*30)
+    if puttext:
+        dimentionBoxStartRow += int(np.random.normal(50, 10))
+        maxStrechOfTextBox = 0
+        for box in range(boxes):
+	        boxdims1 = ''+str(randrange(1,140))+mul+str(randrange(1,140))+mul+str(randrange(1,140))
+	        dimenstionDescription += boxdims1
+	        dimenstionDescription += "\n"
+	        (label_width, label_height), baseline = cv2.getTextSize(boxdims1, font, fontScale*0.9, lineType)
+	        maxStrechOfTextBox = max(maxStrechOfTextBox,label_width)
+
+        dimenstionDescription = dimenstionDescription[:-1]
+        for i, line in enumerate(dimenstionDescription.split('\n')):
+            y = dimentionBoxStartRow + i* (baseline+label_height)
+            cv2.putText(img, line, (dimBoxTextStart, y), font, fontScale*0.9, fontColor, lineType)
+            (label_width, label_height), baseline = cv2.getTextSize(line, font, fontScale*0.9, lineType)
+            topLeftCorner      = (dimBoxTextStart-5,  dimentionBoxStartRow - (baseline+ label_height + 5))
+            bottomRightCorner  = (dimBoxTextStart + label_width + 5,   y)
+            cv2.rectangle(segMask, topLeftCorner, bottomRightCorner, DimentionLable, -1)
+       
+    
+    return (img, segMask)
+
 def add_table_headings(img):
     pieces  = ["No of\npieces \n RCP", 84, 832]
     GW      = [" Gross \nWeight", 175, 838]
@@ -229,12 +456,13 @@ while n > 0:
         tl = add_table_headings(tl)
         #tl = preProcess(tl)
         tl = add_surrounding_text(tl)
-        tl = add_table_entries(tl)
+        tl,mask = add_table_entries(tl)
         tlcrop = tl[int(tl.shape[0]*0.38):int(tl.shape[0]*0.72),:]
+        maskcrop = mask[int(tl.shape[0]*0.38):int(tl.shape[0]*0.72),:]
         cv2.imshow("image", tlcrop)
-
-        cv2.imshow("image2", tl)
-        cv2.waitKey(3)
+        cv2.imshow("mask", maskcrop)
+        #cv2.imshow("image2", tl)
+        cv2.waitKey(0)
 
 
 
