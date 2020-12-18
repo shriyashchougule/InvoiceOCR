@@ -50,12 +50,12 @@ def read_templates(folderPath):
             images.append(img)
     return images
 
-def preProcess(img):
-    img = 255 -img
-    img = img*0.8
-    img = img.astype(int)
-    img = 255 - img
-    img = cv2.blur(img,(2,2))
+def preProcess(img, gamma):
+
+    lookUpTable = np.empty((1,256), np.uint8)
+    for i in range(256):
+        lookUpTable[0,i] = np.clip(pow(i / 255.0, gamma) * 255.0, 0, 255)
+    img = cv2.LUT(img, lookUpTable)
     
     return img
 
@@ -124,7 +124,7 @@ def add_surrounding_text(img):
     img =   add_handling_information(img, rowRange, colRange, strechRange, lineRange, wordRange, fontScale = 0.42, spacing=5)
     
     # Source Airport section    
-    rowRange = (1230,1240)
+    rowRange = (1240,1250)
     colRange = (80, 100,10)
     strechRange = (600,1200, 50)
     lineRange   = (2,5)
@@ -132,14 +132,14 @@ def add_surrounding_text(img):
     img =   add_handling_information(img, rowRange, colRange, strechRange, lineRange, wordRange, fontScale = 0.42, spacing=4)
 
     # Source Airport section    
-    rowRange = (1290,1310)
+    rowRange = (1310,1330)
     colRange = (70, 110, 10)
     strechRange = (600,1200,100)
     lineRange   = (2,3)
     wordRange=(3,50)
     img =   add_handling_information(img, rowRange, colRange, strechRange, lineRange, wordRange, fontScale = 0.42, spacing=4)
     
-    rowRange = (1230,1310)
+    rowRange = (1240,1320)
     colRange = (560, 700, 30)
     strechRange = (1250,1251)
     lineRange   = (2,3)
@@ -154,7 +154,7 @@ def add_handling_information(img, rowRange, colRange, strechRange, lineRange=(1,
     
     if fontScale is None: 
         fontScale              = random.uniform(0.5, 0.75)
-    fontColor              = 0
+    fontColor              = random.uniform(2, 50)
     lineType               = 2
     
     startRow = randrange(*rowRange)
@@ -181,7 +181,7 @@ def add_handling_information(img, rowRange, colRange, strechRange, lineRange=(1,
                 line += " "*spacing
                 #print("line :", line)    
             (label_width, label_height), baseline = cv2.getTextSize(line, font, fontScale*0.98, lineType)
-            print(label_width)
+            #print(label_width)
             if (label_width+startCol) > textMaxStrech:
                 continue
             else:
@@ -204,7 +204,7 @@ def add_text_with_mask(img, mask, label, rowRange, colRange, strechRange, lineRa
     
     if fontScale is None: 
         fontScale              = random.uniform(0.5, 0.75)
-    fontColor              = 0
+    fontColor              =  random.uniform(2, 50)
     lineType               = 2
     
     startRow = randrange(*rowRange)
@@ -231,7 +231,7 @@ def add_text_with_mask(img, mask, label, rowRange, colRange, strechRange, lineRa
                 line += " "*spacing
                 #print("line :", line)    
             (label_width, label_height), baseline = cv2.getTextSize(line, font, fontScale*0.98, lineType)
-            print(label_width)
+            #print(label_width)
             if (label_width+startCol) > textMaxStrech:
                 continue
             else:
@@ -249,8 +249,8 @@ def add_text_with_mask(img, mask, label, rowRange, colRange, strechRange, lineRa
             y = startRow + i* (baseline+label_height)
             cv2.putText(img, line, (startCol, y), font, fontScale*0.98, fontColor, lineType)
 
-            topLeftCorner      = (startCol-10,  y - (baseline+ label_height + 5))
-            bottomRightCorner  = (startCol + label_width + 10,   y)
+            topLeftCorner      = (startCol-5,  y - (baseline+ label_height + 5))
+            bottomRightCorner  = (startCol + label_width + 5,   y)
             cv2.rectangle(mask, topLeftCorner, bottomRightCorner, label, -1)
 
     endOfBox = y
@@ -288,7 +288,7 @@ def add_table_entries(img):
 
     font                   = random.choice(cv2fontList) 
     fontScale              = random.uniform(0.5, 0.75)
-    fontColor              = (2)
+    fontColor              = random.uniform(10, 50)
     lineType               = 2
 
 
@@ -332,8 +332,8 @@ def add_table_entries(img):
     # Strech of the last word i.e value in the Total column 
     (label_width, label_height), baseline = cv2.getTextSize(str(Total), font, fontScale, lineType)
 
-    topLeftCorner      = (piecesStart-10,  rowStart - (baseline+ label_height + 5))
-    bottomRightCorner  = (TotalStart + label_width + 10,  rowStart + 5)
+    topLeftCorner      = (piecesStart-5,  rowStart - (baseline+ label_height + 5))
+    bottomRightCorner  = (TotalStart + label_width + 5,  rowStart + 5)
 
     cv2.rectangle(segMask, topLeftCorner, bottomRightCorner, TableLable, -1)
 
@@ -434,11 +434,11 @@ def add_table_headings(img):
     cv2fontList = [0, 2, 3] #Ref https://codeyarns.com/tech/2015-03-11-fonts-in-opencv.html
     font                   = random.choice(cv2fontList) 
     fontScale              = random.uniform(0.5, 0.75)
-    fontColor              = 0
+    fontColor              = random.uniform(1, 30)
     lineType               = 2
     
     itemsToBePrinted = [pieces, GW, Kglb, rateC, commodity, CW, rateCrg, total, nature]
-    print("font: ", font)
+    #print("font: ", font)
     for item in itemsToBePrinted:
         for i, line in enumerate(item[0].split('\n')):
             (label_width, label_height), baseline = cv2.getTextSize(line, font, 0.46, lineType)
@@ -454,11 +454,63 @@ while n > 0:
     for tl in templateList:
         tl = ResizeWithAspectRatio(tl, width=1280)
         tl = add_table_headings(tl)
-        #tl = preProcess(tl)
+        
+        gamma = max(np.random.normal(0.3, 0.2),0.15)
+        tl = preProcess(tl, gamma)
+        
         tl = add_surrounding_text(tl)
         tl,mask = add_table_entries(tl)
-        tlcrop = tl[int(tl.shape[0]*0.38):int(tl.shape[0]*0.72),:]
-        maskcrop = mask[int(tl.shape[0]*0.38):int(tl.shape[0]*0.72),:]
+        
+        cropRowPos = int(np.random.normal(int(tl.shape[0]*0.38), 40))
+        tlcrop = tl[cropRowPos : cropRowPos+615,:]
+        #maskcrop = mask[int(tl.shape[0]*0.38):int(tl.shape[0]*0.72),:]
+        maskcrop = mask[cropRowPos : cropRowPos+615,:]
+
+        tx = int(np.random.normal(0, 20))
+        ty = 0
+        M = np.float32([[1,0, tx],[0,1, ty]])
+        rows,cols = tlcrop.shape
+        tlcrop = cv2.warpAffine(tlcrop,M,(cols,rows))        
+        maskcrop = cv2.warpAffine(maskcrop,M,(cols,rows))
+
+        tx1 = int(np.random.normal(0, 6.5))
+        tx2 = int(np.random.normal(0, 2))
+        tx3 = int(np.random.normal(0, 2))
+        pts1 = np.float32([[50,50],[1200,50],[50,550], [1200,550]])
+        pts2 = np.float32([[50+tx1, 50],[1200-tx1,50],[50-tx1,550], [1200+tx1,550]])
+
+        M = cv2.getPerspectiveTransform(pts1,pts2)
+
+        tlcrop = cv2.warpPerspective(tlcrop,M,(cols,rows))
+        maskcrop = cv2.warpPerspective(maskcrop,M,(cols,rows))
+
+        rotation = np.random.normal(0, 0.75)
+        rotation_matrix = cv2.getRotationMatrix2D((cols/2, rows/2), rotation, 1)
+        tlcrop = cv2.warpAffine(tlcrop, rotation_matrix, (cols, rows))
+        maskcrop = cv2.warpAffine(maskcrop, rotation_matrix, (cols, rows))
+
+        # Generate Gaussian noise
+        #noiseVar = max(np.random.normal(0.01, 0.2),0.001)
+        gauss = np.random.normal(0, 0.5,tlcrop.size)
+        gauss = gauss.reshape(tlcrop.shape[0],tlcrop.shape[1]).astype('uint8')
+        # Add the Gaussian noise to the image
+        tlcrop = cv2.add(tlcrop,gauss)
+        
+        gamma = max(np.random.normal(0.8, 0.2),0.6)
+        tlcrop = preProcess(tlcrop, gamma)
+        
+
+ 
+        # Generate Gaussian noise
+        noiseVar = max(np.random.normal(200, 200), 10)        
+        gauss = np.random.normal(0,noiseVar,tlcrop.size)
+        gauss = gauss.reshape(tlcrop.shape[0],tlcrop.shape[1]).astype('uint8')
+        tlcrop = cv2.bitwise_and(tlcrop,tlcrop,mask = gauss)
+
+
+        tlcrop = cv2.resize(tlcrop, (512,256), interpolation = cv2.INTER_AREA)
+        maskcrop = cv2.resize(maskcrop, (512,256), interpolation = cv2.INTER_AREA)
+                
         cv2.imshow("image", tlcrop)
         cv2.imshow("mask", maskcrop)
         #cv2.imshow("image2", tl)
